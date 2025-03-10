@@ -38,7 +38,7 @@ program
 
 // Define the main command
 program
-  .argument('<spec>', 'Path or URL to the OpenAPI specification file')
+  .argument('[spec]', 'Path or URL to the OpenAPI specification file')
   .option('-n, --name <n>', 'Name of the MCP server')
   .option('-v, --version <version>', 'Version of the MCP server')
   .option('-u, --base-url <url>', 'Base URL for the API')
@@ -47,7 +47,8 @@ program
   .option('-r, --register', 'Register this API with Claude Desktop')
   .option('-s, --server-name <name>', 'Name to use for the server in Claude Desktop (defaults to spec title)')
   .option('-R, --restart-claude', 'Automatically restart Claude Desktop after registration')
-  .action(async (specPath: string, options: {
+  .option('-i, --interactive', 'Run in interactive mode with prompts for all options')
+  .action(async (specPath: string | undefined, options: {
     name?: string;
     version?: string;
     baseUrl?: string;
@@ -56,8 +57,16 @@ program
     register?: boolean;
     serverName?: string;
     restartClaude?: boolean;
+    interactive?: boolean;
   }) => {
     try {
+      // If no spec path is provided or interactive mode is enabled, prompt for inputs
+      if (!specPath || options.interactive) {
+        const answers = await promptForMissingOptions(specPath, options);
+        specPath = answers.specPath;
+        options = { ...options, ...answers.options };
+      }
+
       // Load the OpenAPI spec
       const spinner = ora(chalk.blue(`Loading OpenAPI spec from ${chalk.cyan(specPath)}...`)).start();
       const spec = await loadOpenAPISpec(specPath);
@@ -153,6 +162,127 @@ program
       process.exit(1);
     }
   });
+
+/**
+ * Prompt for missing required options in interactive mode
+ */
+async function promptForMissingOptions(specPath?: string, options?: any): Promise<{ specPath: string, options: any }> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  const prompt = (question: string): Promise<string> => {
+    return new Promise((resolve) => {
+      rl.question(chalk.cyan(`💬 ${question}`), (answer) => {
+        resolve(answer.trim());
+      });
+    });
+  };
+
+  const promptYesNo = async (question: string, defaultYes = true): Promise<boolean> => {
+    const suffix = defaultYes ? '[Y/n]' : '[y/N]';
+    const answer = await prompt(`${question} ${suffix} `);
+    if (!answer) return defaultYes;
+    return answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes';
+  };
+
+  try {
+    const updatedOptions: any = { ...options };
+    
+    // Prompt for OpenAPI spec path if not provided
+    if (!specPath) {
+      console.log(chalk.blue('\n📋 Interactive Mode - Enter the required information:'));
+      
+      const exampleSpecs = [
+        { name: 'Pet Store API (Example)', value: 'https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml' },
+        { name: 'FireCrawl API', value: 'https://raw.githubusercontent.com/devflowinc/firecrawl-simple/main/apps/api/v1-openapi.json' },
+        { name: 'Custom URL or local file path', value: 'custom' }
+      ];
+      
+      console.log(chalk.blue('\nChoose an OpenAPI specification:'));
+      for (let i = 0; i < exampleSpecs.length; i++) {
+        console.log(chalk.cyan(`  ${i + 1}. ${exampleSpecs[i].name}`));
+      }
+      
+      const specChoice = await prompt('Enter your choice (1-3): ');
+      const choiceIndex = parseInt(specChoice) - 1;
+      
+      if (choiceIndex >= 0 && choiceIndex < exampleSpecs.length) {
+        if (exampleSpecs[choiceIndex].value === 'custom') {
+          specPath = await prompt('Enter the URL or file path to your OpenAPI spec: ');
+        } else {
+          specPath = exampleSpecs[choiceIndex].value;
+        }
+      } else {
+        specPath = await prompt('Enter the URL or file path to your OpenAPI spec: ');
+      }
+    }
+    
+    // If interactive mode, prompt for all other options
+    if (options.interactive) {
+      // Server name
+      if (!updatedOptions.name) {
+        const name = await prompt('Enter server name (optional, press Enter to use default): ');
+        if (name) updatedOptions.name = name;
+      }
+      
+      // Version
+      if (!updatedOptions.version) {
+        const version = await prompt('Enter version (optional, press Enter to use default): ');
+        if (version) updatedOptions.version = version;
+      }
+      
+      // API Key
+      if (!updatedOptions.apiKey) {
+        const apiKey = await prompt('Enter API key (optional, press Enter to skip): ');
+        if (apiKey) updatedOptions.apiKey = apiKey;
+      }
+      
+      // Base URL
+      if (!updatedOptions.baseUrl) {
+        const baseUrl = await prompt('Enter base URL (optional, press Enter to use default from spec): ');
+        if (baseUrl) updatedOptions.baseUrl = baseUrl;
+      }
+      
+      // Register with Claude Desktop
+      if (updatedOptions.register === undefined) {
+        updatedOptions.register = await promptYesNo('Register with Claude Desktop?');
+      }
+      
+      // Claude Desktop server name (if registering)
+      if (updatedOptions.register && !updatedOptions.serverName) {
+        const serverName = await prompt('Enter name for Claude Desktop server (optional, press Enter to use default): ');
+        if (serverName) updatedOptions.serverName = serverName;
+      }
+      
+      // Restart Claude Desktop (if registering)
+      if (updatedOptions.register && updatedOptions.restartClaude === undefined) {
+        updatedOptions.restartClaude = await promptYesNo('Automatically restart Claude Desktop?');
+      }
+      
+      // Headers
+      const addHeader = await promptYesNo('Add custom HTTP headers?', false);
+      if (addHeader) {
+        let addMoreHeaders = true;
+        while (addMoreHeaders) {
+          const headerName = await prompt('Enter header name: ');
+          const headerValue = await prompt('Enter header value: ');
+          if (headerName && headerValue) {
+            updatedOptions.header[headerName] = headerValue;
+          }
+          
+          addMoreHeaders = await promptYesNo('Add another header?', false);
+        }
+      }
+    }
+    
+    return { specPath, options: updatedOptions };
+    
+  } finally {
+    rl.close();
+  }
+}
 
 /**
  * Restart Claude Desktop application

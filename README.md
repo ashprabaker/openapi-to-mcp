@@ -18,6 +18,7 @@ A CLI tool that converts any OpenAPI specification into an MCP server for seamle
 - 🔐 **Authentication Support**: Handles API keys, Bearer tokens, and OAuth (coming soon)
 - 💻 **Cross-Platform**: Works on macOS, Windows, and Linux
 - 📚 **Full OpenAPI Support**: Compatible with OpenAPI 3.0 specifications
+- 🧙‍♂️ **Interactive Mode**: Guided setup with no command line arguments needed
 
 ## 🔧 Installation
 
@@ -38,6 +39,24 @@ npm link
 
 ## 🚀 Quick Start for Claude Desktop
 
+### Interactive Mode (Easiest)
+
+```bash
+# Start in fully guided interactive mode
+npm run interactive
+
+# Or if installed globally:
+openapi-to-mcp -i
+```
+
+This will guide you through setting up an API with step-by-step prompts:
+1. Choose from popular APIs or enter your own
+2. Automatically detects authentication requirements
+3. Guides you through all options with sensible defaults
+4. Can register and restart Claude Desktop automatically
+
+### Command Line Mode
+
 ```bash
 # Add an API to Claude Desktop with one command and auto-restart
 openapi-to-mcp https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml -r -R
@@ -49,6 +68,9 @@ openapi-to-mcp https://raw.githubusercontent.com/devflowinc/firecrawl-simple/mai
 ## 📋 Usage
 
 ```bash
+# Run in interactive mode
+openapi-to-mcp -i
+
 # Basic usage
 openapi-to-mcp <path-or-url-to-openapi-spec>
 
@@ -82,6 +104,7 @@ openapi-to-mcp ./petstore.yaml -H "Authorization: Bearer token123"
 
 ## ⚙️ Options
 
+- `-i, --interactive`: Run in interactive mode with guided prompts
 - `-n, --name <name>`: Set a custom name for the MCP server (defaults to the title from the OpenAPI spec)
 - `-v, --version <version>`: Set a custom version for the server (defaults to the version from the OpenAPI spec)
 - `-u, --base-url <url>`: Set a custom base URL for API requests (defaults to the first server URL in the OpenAPI spec)
@@ -98,6 +121,9 @@ This tool is specifically designed to work seamlessly with Claude Desktop:
 ```bash
 # Register any API with Claude Desktop in one step and auto-restart
 openapi-to-mcp https://api.example.com/openapi.json -k your-api-key -r -R
+
+# Or use interactive mode for guided setup
+openapi-to-mcp -i
 ```
 
 This will:
@@ -139,16 +165,25 @@ The tool automatically detects authentication requirements from the OpenAPI spec
 
 ## 🔌 Use with Claude Desktop
 
-There are two ways to use this tool with Claude Desktop:
+There are three ways to use this tool with Claude Desktop:
 
-### Method 1: Auto-registration (recommended) ✨
+### Method 1: Interactive Mode (Recommended for Beginners) ✨
+```bash
+# Start the interactive wizard
+npm run interactive
+# Or if globally installed:
+openapi-to-mcp -i
+```
+You'll be guided through the entire process with simple prompts!
+
+### Method 2: Auto-registration (Recommended for Command Line) ✨
 ```bash
 # One-time registration with auto-restart
 openapi-to-mcp your-api-spec.yaml -k your-api-key -r -R
 ```
 Claude Desktop will automatically restart and the API will appear in your sidebar!
 
-### Method 2: Manual connection 🔧
+### Method 3: Manual connection 🔧
 1. Run the tool with your OpenAPI spec: `openapi-to-mcp ./spec.yaml -k your-api-key`
 2. In Claude Desktop, add the MCP Server via the "Add Tool" button
 3. Use the "Connect to local server" option and follow the prompts
