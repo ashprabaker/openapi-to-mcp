@@ -6,6 +6,7 @@ A CLI tool that converts any OpenAPI specification into an MCP server for seamle
 
 - **Instant Claude Desktop Integration**: Add any API to Claude with a single command
 - **Auto-Configuration**: Automatically updates Claude Desktop's config file
+- **Auto-Restart**: Can automatically restart Claude Desktop after registration
 - **Authentication Support**: Handles API keys, Bearer tokens, and OAuth (coming soon)
 - **Cross-Platform**: Works on macOS, Windows, and Linux
 - **Full OpenAPI Support**: Compatible with OpenAPI 3.0 specifications
@@ -30,13 +31,11 @@ npm link
 ## Quick Start for Claude Desktop
 
 ```bash
-# Add an API to Claude Desktop with one command
-openapi-to-mcp https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml -r
+# Add an API to Claude Desktop with one command and auto-restart
+openapi-to-mcp https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml -r -R
 
-# Add FireCrawl API with authentication
-openapi-to-mcp https://raw.githubusercontent.com/devflowinc/firecrawl-simple/main/apps/api/v1-openapi.json -k your-api-key -r
-
-# Then restart Claude Desktop to see the new tool in your sidebar
+# Add FireCrawl API with authentication and auto-restart
+openapi-to-mcp https://raw.githubusercontent.com/devflowinc/firecrawl-simple/main/apps/api/v1-openapi.json -k your-api-key -r -R
 ```
 
 ## Usage
@@ -56,6 +55,9 @@ openapi-to-mcp ./petstore.yaml -k "your-api-key-here"
 
 # Auto-register with Claude Desktop (will update Claude Desktop's config file)
 openapi-to-mcp ./petstore.yaml -r
+
+# Auto-register and automatically restart Claude Desktop
+openapi-to-mcp ./petstore.yaml -r -R
 
 # Auto-register with a custom server name
 openapi-to-mcp ./petstore.yaml -r -s "my-custom-api"
@@ -79,14 +81,15 @@ openapi-to-mcp ./petstore.yaml -H "Authorization: Bearer token123"
 - `-H, --header <header>`: Add a custom HTTP header to include with requests (format: "Name: Value")
 - `-r, --register`: Automatically register the API with Claude Desktop
 - `-s, --server-name <name>`: Custom name for the registered server in Claude Desktop
+- `-R, --restart-claude`: Automatically restart Claude Desktop after registration (cross-platform)
 
 ## Claude Desktop Integration
 
 This tool is specifically designed to work seamlessly with Claude Desktop:
 
 ```bash
-# Register any API with Claude Desktop in one step
-openapi-to-mcp https://api.example.com/openapi.json -k your-api-key -r
+# Register any API with Claude Desktop in one step and auto-restart
+openapi-to-mcp https://api.example.com/openapi.json -k your-api-key -r -R
 ```
 
 This will:
@@ -94,8 +97,9 @@ This will:
 2. Add or update the server configuration
 3. Preserve any existing configurations
 4. Auto-generate a server name based on the API title
+5. Automatically restart Claude Desktop (if -R flag is used)
 
-After registration, restart Claude Desktop to see the new API in your sidebar.
+The auto-restart feature works on macOS, Windows, and Linux, allowing you to immediately use your new API without manually restarting Claude.
 
 ## Supported API Platforms
 

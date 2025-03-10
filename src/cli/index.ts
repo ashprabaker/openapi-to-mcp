@@ -8,6 +8,10 @@ import readline from 'readline';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 const program = new Command();
 
@@ -27,6 +31,7 @@ program
   .option('-H, --header <header>', 'HTTP header(s) to include with requests (format: "Name: Value")', collectHeaders, {})
   .option('-r, --register', 'Register this API with Claude Desktop')
   .option('-s, --server-name <name>', 'Name to use for the server in Claude Desktop (defaults to spec title)')
+  .option('-R, --restart-claude', 'Automatically restart Claude Desktop after registration')
   .action(async (specPath: string, options: {
     name?: string;
     version?: string;
@@ -35,6 +40,7 @@ program
     header: Record<string, string>;
     register?: boolean;
     serverName?: string;
+    restartClaude?: boolean;
   }) => {
     try {
       // Load the OpenAPI spec
@@ -81,6 +87,11 @@ program
           options.baseUrl,
           options.header
         );
+
+        // If restart option is set, restart Claude Desktop
+        if (options.restartClaude) {
+          await restartClaudeDesktop();
+        }
       }
       
       // Create the server generator
@@ -107,6 +118,43 @@ program
       process.exit(1);
     }
   });
+
+/**
+ * Restart Claude Desktop application
+ */
+async function restartClaudeDesktop(): Promise<void> {
+  const platform = process.platform;
+
+  try {
+    console.error('Restarting Claude Desktop...');
+
+    if (platform === 'darwin') {
+      // macOS
+      await execAsync('pkill -x "Claude"');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for app to close
+      await execAsync('open -a "Claude"');
+    } else if (platform === 'win32') {
+      // Windows
+      await execAsync('taskkill /IM "Claude.exe" /F');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for app to close
+      await execAsync('start "" "Claude.exe"');
+    } else if (platform === 'linux') {
+      // Linux - this is more complex and might not work for all distributions
+      await execAsync('pkill -f "claude-desktop"');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for app to close
+      await execAsync('claude-desktop &');
+    } else {
+      console.error(`Automatic restart not supported on platform: ${platform}`);
+      console.error('Please restart Claude Desktop manually.');
+      return;
+    }
+
+    console.error('Claude Desktop has been restarted!');
+  } catch (error) {
+    console.error('Failed to restart Claude Desktop:', error instanceof Error ? error.message : String(error));
+    console.error('Please restart Claude Desktop manually.');
+  }
+}
 
 /**
  * Register the API with Claude Desktop by updating its config file
