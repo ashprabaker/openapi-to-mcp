@@ -49,11 +49,11 @@ npm run interactive
 openapi-to-mcp -i
 ```
 
-This will guide you through setting up an API with step-by-step prompts:
-1. Choose from popular APIs or enter your own
-2. Automatically detects authentication requirements
-3. Guides you through all options with sensible defaults
-4. Can register and restart Claude Desktop automatically
+This will guide you through setting up an API with minimal prompts:
+1. Enter your OpenAPI spec URL or file path
+2. Optionally provide an API key if needed
+3. Choose whether to register with Claude Desktop
+4. Decide if you want to automatically restart Claude Desktop
 
 ### Command Line Mode
 
@@ -61,8 +61,8 @@ This will guide you through setting up an API with step-by-step prompts:
 # Add an API to Claude Desktop with one command and auto-restart
 openapi-to-mcp https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml -r -R
 
-# Add FireCrawl API with authentication and auto-restart
-openapi-to-mcp https://raw.githubusercontent.com/devflowinc/firecrawl-simple/main/apps/api/v1-openapi.json -k your-api-key -r -R
+# Add an API with authentication and auto-restart
+openapi-to-mcp https://your-api-spec-url.json -k your-api-key -r -R
 ```
 
 ## 📋 Usage
@@ -75,31 +75,31 @@ openapi-to-mcp -i
 openapi-to-mcp <path-or-url-to-openapi-spec>
 
 # Example with a local file
-openapi-to-mcp ./petstore.yaml
+openapi-to-mcp ./your-api.yaml
 
 # Example with a URL
-openapi-to-mcp https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml
+openapi-to-mcp https://your-api-spec-url.json
 
 # With API key authentication
-openapi-to-mcp ./petstore.yaml -k "your-api-key-here"
+openapi-to-mcp ./your-api.yaml -k "your-api-key-here"
 
 # Auto-register with Claude Desktop (will update Claude Desktop's config file)
-openapi-to-mcp ./petstore.yaml -r
+openapi-to-mcp ./your-api.yaml -r
 
 # Auto-register and automatically restart Claude Desktop
-openapi-to-mcp ./petstore.yaml -r -R
+openapi-to-mcp ./your-api.yaml -r -R
 
 # Auto-register with a custom server name
-openapi-to-mcp ./petstore.yaml -r -s "my-custom-api"
+openapi-to-mcp ./your-api.yaml -r -s "my-custom-api"
 
 # Custom server name and version
-openapi-to-mcp ./petstore.yaml -n "Pet Store API" -v "1.0.0"
+openapi-to-mcp ./your-api.yaml -n "My API" -v "1.0.0"
 
 # Custom base URL
-openapi-to-mcp ./petstore.yaml -u "https://api.example.com"
+openapi-to-mcp ./your-api.yaml -u "https://api.example.com"
 
 # With custom headers
-openapi-to-mcp ./petstore.yaml -H "Authorization: Bearer token123"
+openapi-to-mcp ./your-api.yaml -H "Authorization: Bearer token123"
 ```
 
 ## ⚙️ Options
@@ -120,7 +120,7 @@ This tool is specifically designed to work seamlessly with Claude Desktop:
 
 ```bash
 # Register any API with Claude Desktop in one step and auto-restart
-openapi-to-mcp https://api.example.com/openapi.json -k your-api-key -r -R
+openapi-to-mcp https://your-api-spec-url.json -k your-api-key -r -R
 
 # Or use interactive mode for guided setup
 openapi-to-mcp -i

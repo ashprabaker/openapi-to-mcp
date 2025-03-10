@@ -193,56 +193,15 @@ async function promptForMissingOptions(specPath?: string, options?: any): Promis
     // Prompt for OpenAPI spec path if not provided
     if (!specPath) {
       console.log(chalk.blue('\n📋 Interactive Mode - Enter the required information:'));
-      
-      const exampleSpecs = [
-        { name: 'Pet Store API (Example)', value: 'https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml' },
-        { name: 'FireCrawl API', value: 'https://raw.githubusercontent.com/devflowinc/firecrawl-simple/main/apps/api/v1-openapi.json' },
-        { name: 'Custom URL or local file path', value: 'custom' }
-      ];
-      
-      console.log(chalk.blue('\nChoose an OpenAPI specification:'));
-      for (let i = 0; i < exampleSpecs.length; i++) {
-        console.log(chalk.cyan(`  ${i + 1}. ${exampleSpecs[i].name}`));
-      }
-      
-      const specChoice = await prompt('Enter your choice (1-3): ');
-      const choiceIndex = parseInt(specChoice) - 1;
-      
-      if (choiceIndex >= 0 && choiceIndex < exampleSpecs.length) {
-        if (exampleSpecs[choiceIndex].value === 'custom') {
-          specPath = await prompt('Enter the URL or file path to your OpenAPI spec: ');
-        } else {
-          specPath = exampleSpecs[choiceIndex].value;
-        }
-      } else {
-        specPath = await prompt('Enter the URL or file path to your OpenAPI spec: ');
-      }
+      specPath = await prompt('Enter the URL or file path to your OpenAPI spec: ');
     }
     
-    // If interactive mode, prompt for all other options
+    // If interactive mode, only prompt for essential options
     if (options.interactive) {
-      // Server name
-      if (!updatedOptions.name) {
-        const name = await prompt('Enter server name (optional, press Enter to use default): ');
-        if (name) updatedOptions.name = name;
-      }
-      
-      // Version
-      if (!updatedOptions.version) {
-        const version = await prompt('Enter version (optional, press Enter to use default): ');
-        if (version) updatedOptions.version = version;
-      }
-      
-      // API Key
+      // API Key (optional but common)
       if (!updatedOptions.apiKey) {
         const apiKey = await prompt('Enter API key (optional, press Enter to skip): ');
         if (apiKey) updatedOptions.apiKey = apiKey;
-      }
-      
-      // Base URL
-      if (!updatedOptions.baseUrl) {
-        const baseUrl = await prompt('Enter base URL (optional, press Enter to use default from spec): ');
-        if (baseUrl) updatedOptions.baseUrl = baseUrl;
       }
       
       // Register with Claude Desktop
@@ -250,30 +209,9 @@ async function promptForMissingOptions(specPath?: string, options?: any): Promis
         updatedOptions.register = await promptYesNo('Register with Claude Desktop?');
       }
       
-      // Claude Desktop server name (if registering)
-      if (updatedOptions.register && !updatedOptions.serverName) {
-        const serverName = await prompt('Enter name for Claude Desktop server (optional, press Enter to use default): ');
-        if (serverName) updatedOptions.serverName = serverName;
-      }
-      
       // Restart Claude Desktop (if registering)
       if (updatedOptions.register && updatedOptions.restartClaude === undefined) {
         updatedOptions.restartClaude = await promptYesNo('Automatically restart Claude Desktop?');
-      }
-      
-      // Headers
-      const addHeader = await promptYesNo('Add custom HTTP headers?', false);
-      if (addHeader) {
-        let addMoreHeaders = true;
-        while (addMoreHeaders) {
-          const headerName = await prompt('Enter header name: ');
-          const headerValue = await prompt('Enter header value: ');
-          if (headerName && headerValue) {
-            updatedOptions.header[headerName] = headerValue;
-          }
-          
-          addMoreHeaders = await promptYesNo('Add another header?', false);
-        }
       }
     }
     
