@@ -10,14 +10,29 @@ import path from 'path';
 import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import chalk from 'chalk';
+import ora from 'ora';
+import figlet from 'figlet';
 
 const execAsync = promisify(exec);
+
+// Display ASCII art banner
+console.log(
+  chalk.cyan(
+    figlet.textSync('OpenAPI to MCP', { 
+      font: 'Standard',
+      horizontalLayout: 'default',
+      verticalLayout: 'default' 
+    })
+  )
+);
+console.log(chalk.blue('Convert any OpenAPI spec to an MCP server for Claude Desktop 🤖\n'));
 
 const program = new Command();
 
 // Define the CLI version
 program
-  .name('openapi-to-mcp')
+  .name(chalk.cyan('openapi-to-mcp'))
   .description('CLI tool to convert OpenAPI specs to MCP servers')
   .version('1.0.0');
 
@@ -44,14 +59,16 @@ program
   }) => {
     try {
       // Load the OpenAPI spec
-      console.error(`Loading OpenAPI spec from ${specPath}...`);
+      const spinner = ora(chalk.blue(`Loading OpenAPI spec from ${chalk.cyan(specPath)}...`)).start();
       const spec = await loadOpenAPISpec(specPath);
+      spinner.succeed(chalk.green(`Successfully loaded OpenAPI spec from ${chalk.cyan(specPath)}`));
       
       // Check if API requires authentication
       const requiresAuth = checkIfAuthRequired(spec);
       
       // If auth is required but no API key provided, prompt for it
       if (requiresAuth && !options.apiKey && !hasAuthHeader(options.header)) {
+        console.log(chalk.yellow('⚠️  API requires authentication'));
         options.apiKey = await promptForApiKey();
       }
       
@@ -61,13 +78,18 @@ program
         const authType = getAuthType(spec);
         
         if (authType === 'bearer') {
+          spinner.start(chalk.blue('Setting up Bearer authentication...'));
           options.header['Authorization'] = `Bearer ${options.apiKey}`;
+          spinner.succeed(chalk.green('Bearer authentication configured'));
         } else if (authType === 'apiKey') {
           const { name, in: location } = getApiKeyDetails(spec);
           if (location === 'header') {
+            spinner.start(chalk.blue(`Setting up API Key authentication in header '${name}'...`));
             options.header[name] = options.apiKey;
+            spinner.succeed(chalk.green('API Key authentication configured'));
+          } else {
+            spinner.info(chalk.blue(`API Key will be sent as a ${location} parameter`));
           }
-          // For query parameters, we'll handle it when making the request
         }
       }
 
@@ -78,6 +100,7 @@ program
           spec.info.title?.toLowerCase().replace(/[^a-z0-9]/g, '_') || 
           path.basename(specPath, path.extname(specPath));
         
+        spinner.start(chalk.blue(`Registering API as "${chalk.cyan(serverName)}" with Claude Desktop...`));
         await registerWithClaudeDesktop(
           serverName,
           specPath,
@@ -87,14 +110,20 @@ program
           options.baseUrl,
           options.header
         );
+        spinner.succeed(chalk.green(`Successfully registered API as "${chalk.cyan(serverName)}" with Claude Desktop!`));
 
         // If restart option is set, restart Claude Desktop
         if (options.restartClaude) {
+          spinner.start(chalk.blue('Restarting Claude Desktop...'));
           await restartClaudeDesktop();
+          spinner.succeed(chalk.green('Claude Desktop has been restarted!'));
+        } else {
+          console.log(chalk.yellow('ℹ️  Remember to restart Claude Desktop for the changes to take effect.'));
         }
       }
       
       // Create the server generator
+      spinner.start(chalk.blue('Generating MCP server...'));
       const generator = new MCPServerGenerator(spec, {
         name: options.name,
         version: options.version,
@@ -104,17 +133,23 @@ program
       });
       
       // Generate the MCP server
-      console.error('Generating MCP server...');
       const server = generator.generateServer();
+      spinner.succeed(chalk.green('MCP server generated successfully'));
       
       // Start the server using stdio transport
-      console.error('Starting MCP server via stdio...');
+      spinner.start(chalk.blue('Starting MCP server via stdio...'));
       const transport = new StdioServerTransport();
       await server.connect(transport);
       
-      console.error('MCP server is running. You can now use it with Claude Desktop or any MCP-compatible client.');
+      spinner.succeed(chalk.green('MCP server is running'));
+      console.log(chalk.cyan('┌─────────────────────────────────────────────────────────┐'));
+      console.log(chalk.cyan('│                                                         │'));
+      console.log(chalk.cyan('│  ') + chalk.yellow('MCP server is running and ready to use with Claude') + chalk.cyan('  │'));
+      console.log(chalk.cyan('│  ') + chalk.yellow('Press Ctrl+C to stop the server') + chalk.cyan('                    │'));
+      console.log(chalk.cyan('│                                                         │'));
+      console.log(chalk.cyan('└─────────────────────────────────────────────────────────┘'));
     } catch (error: unknown) {
-      console.error('Error:', error instanceof Error ? error.message : String(error));
+      ora().fail(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
       process.exit(1);
     }
   });
@@ -126,8 +161,6 @@ async function restartClaudeDesktop(): Promise<void> {
   const platform = process.platform;
 
   try {
-    console.error('Restarting Claude Desktop...');
-
     if (platform === 'darwin') {
       // macOS
       await execAsync('pkill -x "Claude"');
@@ -144,15 +177,13 @@ async function restartClaudeDesktop(): Promise<void> {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for app to close
       await execAsync('claude-desktop &');
     } else {
-      console.error(`Automatic restart not supported on platform: ${platform}`);
-      console.error('Please restart Claude Desktop manually.');
+      console.log(chalk.yellow(`⚠️  Automatic restart not supported on platform: ${platform}`));
+      console.log(chalk.yellow('⚠️  Please restart Claude Desktop manually.'));
       return;
     }
-
-    console.error('Claude Desktop has been restarted!');
   } catch (error) {
-    console.error('Failed to restart Claude Desktop:', error instanceof Error ? error.message : String(error));
-    console.error('Please restart Claude Desktop manually.');
+    console.log(chalk.yellow('⚠️  Failed to restart Claude Desktop:'), error instanceof Error ? error.message : String(error));
+    console.log(chalk.yellow('⚠️  Please restart Claude Desktop manually.'));
   }
 }
 
@@ -173,11 +204,11 @@ async function registerWithClaudeDesktop(
     const configPath = await findClaudeDesktopConfig();
     
     if (!configPath) {
-      console.error('Could not find Claude Desktop config file. Continuing without registration.');
+      console.log(chalk.yellow('⚠️  Could not find Claude Desktop config file. Continuing without registration.'));
       return;
     }
     
-    console.error(`Found Claude Desktop config at: ${configPath}`);
+    console.log(chalk.blue(`Found Claude Desktop config at: ${chalk.cyan(configPath)}`));
     
     // Read the current config
     let config: any = {};
@@ -228,13 +259,9 @@ async function registerWithClaudeDesktop(
     
     // Write the updated config
     await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
-    
-    console.error(`Successfully registered API as "${serverName}" with Claude Desktop!`);
-    console.error('Restart Claude Desktop for the changes to take effect.');
-    
   } catch (err) {
-    console.error('Failed to register with Claude Desktop:', err instanceof Error ? err.message : String(err));
-    console.error('Continuing without registration.');
+    console.log(chalk.yellow('⚠️  Failed to register with Claude Desktop:'), err instanceof Error ? err.message : String(err));
+    console.log(chalk.yellow('⚠️  Continuing without registration.'));
   }
 }
 
@@ -357,7 +384,7 @@ function promptForApiKey(): Promise<string> {
   });
   
   return new Promise(resolve => {
-    rl.question('Enter API key: ', (answer) => {
+    rl.question(chalk.cyan('💬 Enter API key: '), (answer) => {
       rl.close();
       resolve(answer.trim());
     });
