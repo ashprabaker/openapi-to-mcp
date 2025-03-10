@@ -1,17 +1,19 @@
-# OpenAPI to MCP
+# 🔌 OpenAPI to MCP 🤖
+
+<!-- ASCII ART WILL GO HERE -->
 
 A CLI tool that converts any OpenAPI specification into an MCP server for seamless integration with Claude Desktop. Instantly add API access to Claude through a simple one-line command.
 
-## Key Features
+## ✨ Key Features
 
-- **Instant Claude Desktop Integration**: Add any API to Claude with a single command
-- **Auto-Configuration**: Automatically updates Claude Desktop's config file
-- **Auto-Restart**: Can automatically restart Claude Desktop after registration
-- **Authentication Support**: Handles API keys, Bearer tokens, and OAuth (coming soon)
-- **Cross-Platform**: Works on macOS, Windows, and Linux
-- **Full OpenAPI Support**: Compatible with OpenAPI 3.0 specifications
+- 🔄 **Instant Claude Desktop Integration**: Add any API to Claude with a single command
+- ⚙️ **Auto-Configuration**: Automatically updates Claude Desktop's config file
+- 🔄 **Auto-Restart**: Can automatically restart Claude Desktop after registration
+- 🔐 **Authentication Support**: Handles API keys, Bearer tokens, and OAuth (coming soon)
+- 💻 **Cross-Platform**: Works on macOS, Windows, and Linux
+- 📚 **Full OpenAPI Support**: Compatible with OpenAPI 3.0 specifications
 
-## Installation
+## 🔧 Installation
 
 ```bash
 # Clone the repository
@@ -28,7 +30,7 @@ npm run build
 npm link
 ```
 
-## Quick Start for Claude Desktop
+## 🚀 Quick Start for Claude Desktop
 
 ```bash
 # Add an API to Claude Desktop with one command and auto-restart
@@ -38,7 +40,7 @@ openapi-to-mcp https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/
 openapi-to-mcp https://raw.githubusercontent.com/devflowinc/firecrawl-simple/main/apps/api/v1-openapi.json -k your-api-key -r -R
 ```
 
-## Usage
+## 📋 Usage
 
 ```bash
 # Basic usage
@@ -72,7 +74,7 @@ openapi-to-mcp ./petstore.yaml -u "https://api.example.com"
 openapi-to-mcp ./petstore.yaml -H "Authorization: Bearer token123"
 ```
 
-## Options
+## ⚙️ Options
 
 - `-n, --name <name>`: Set a custom name for the MCP server (defaults to the title from the OpenAPI spec)
 - `-v, --version <version>`: Set a custom version for the server (defaults to the version from the OpenAPI spec)
@@ -83,7 +85,7 @@ openapi-to-mcp ./petstore.yaml -H "Authorization: Bearer token123"
 - `-s, --server-name <name>`: Custom name for the registered server in Claude Desktop
 - `-R, --restart-claude`: Automatically restart Claude Desktop after registration (cross-platform)
 
-## Claude Desktop Integration
+## 🤖 Claude Desktop Integration
 
 This tool is specifically designed to work seamlessly with Claude Desktop:
 
@@ -93,58 +95,58 @@ openapi-to-mcp https://api.example.com/openapi.json -k your-api-key -r -R
 ```
 
 This will:
-1. Find the Claude Desktop config file on your system
-2. Add or update the server configuration
-3. Preserve any existing configurations
-4. Auto-generate a server name based on the API title
-5. Automatically restart Claude Desktop (if -R flag is used)
+1. 🔍 Find the Claude Desktop config file on your system
+2. ➕ Add or update the server configuration
+3. 💾 Preserve any existing configurations
+4. 🏷️ Auto-generate a server name based on the API title
+5. 🔄 Automatically restart Claude Desktop (if -R flag is used)
 
 The auto-restart feature works on macOS, Windows, and Linux, allowing you to immediately use your new API without manually restarting Claude.
 
-## Supported API Platforms
+## 🌐 Supported API Platforms
 
 You can use this tool with any OpenAPI-compliant API, including:
 
-- GitHub API
-- Stripe API
-- Shopify API
-- Firebase API
-- Custom internal APIs
-- And many more!
+- 🐙 GitHub API
+- 💳 Stripe API
+- 🛒 Shopify API
+- 🔥 Firebase API
+- 🏢 Custom internal APIs
+- ✨ And many more!
 
-## Authentication Support
+## 🔑 Authentication Support
 
 The tool automatically detects authentication requirements from the OpenAPI specification:
 
-- Bearer authentication: When detected, the provided API key is used as a Bearer token
-- API Key authentication: Either added as a header or query parameter as specified in the spec
-- For APIs requiring authentication but no key is provided, the tool will prompt for an API key
+- 🔐 **Bearer authentication**: When detected, the provided API key is used as a Bearer token
+- 🔑 **API Key authentication**: Either added as a header or query parameter as specified in the spec
+- 💬 For APIs requiring authentication but no key is provided, the tool will prompt for an API key
 
-## How It Works
+## 🔍 How It Works
 
-1. The tool loads and parses the OpenAPI spec from a file or URL
-2. It automatically detects authentication requirements and handles them appropriately
-3. It converts each OpenAPI operation into an MCP tool
-4. Parameters are converted to Zod schemas for validation
-5. When a tool is called, the corresponding API request is made
-6. The response is returned to the MCP client
+1. 📥 The tool loads and parses the OpenAPI spec from a file or URL
+2. 🔐 It automatically detects authentication requirements and handles them appropriately
+3. 🛠️ It converts each OpenAPI operation into an MCP tool
+4. ✅ Parameters are converted to Zod schemas for validation
+5. 🌐 When a tool is called, the corresponding API request is made
+6. 📤 The response is returned to the MCP client
 
-## Use with Claude Desktop
+## 🔌 Use with Claude Desktop
 
 There are two ways to use this tool with Claude Desktop:
 
-### Method 1: Auto-registration (recommended)
+### Method 1: Auto-registration (recommended) ✨
 ```bash
-# One-time registration
-openapi-to-mcp your-api-spec.yaml -k your-api-key -r
+# One-time registration with auto-restart
+openapi-to-mcp your-api-spec.yaml -k your-api-key -r -R
 ```
-Then restart Claude Desktop, and the API will appear in your sidebar.
+Claude Desktop will automatically restart and the API will appear in your sidebar!
 
-### Method 2: Manual connection
+### Method 2: Manual connection 🔧
 1. Run the tool with your OpenAPI spec: `openapi-to-mcp ./spec.yaml -k your-api-key`
 2. In Claude Desktop, add the MCP Server via the "Add Tool" button
 3. Use the "Connect to local server" option and follow the prompts
 
-## License
+## 📝 License
 
 MIT 
