@@ -1,6 +1,16 @@
 # OpenAPI to MCP
 
-A CLI tool that converts any OpenAPI specification into an MCP (Model Context Protocol) server. This allows you to expose any OpenAPI-defined API as a tool to Claude Desktop or any MCP-compatible client.
+A CLI tool that converts any OpenAPI specification into an MCP server for seamless integration with Claude Desktop. Instantly add API access to Claude through a simple one-line command.
+
+![Claude Desktop Integration](https://github.com/ashprabaker/openapi-to-mcp/raw/main/docs/images/claude-desktop-integration.png)
+
+## Key Features
+
+- **Instant Claude Desktop Integration**: Add any API to Claude with a single command
+- **Auto-Configuration**: Automatically updates Claude Desktop's config file
+- **Authentication Support**: Handles API keys, Bearer tokens, and OAuth (coming soon)
+- **Cross-Platform**: Works on macOS, Windows, and Linux
+- **Full OpenAPI Support**: Compatible with OpenAPI 3.0 specifications
 
 ## Installation
 
@@ -15,8 +25,20 @@ npm install
 # Build the project
 npm run build
 
-# Link the CLI tool
+# Link the CLI tool globally
 npm link
+```
+
+## Quick Start for Claude Desktop
+
+```bash
+# Add an API to Claude Desktop with one command
+openapi-to-mcp https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml -r
+
+# Add FireCrawl API with authentication
+openapi-to-mcp https://raw.githubusercontent.com/devflowinc/firecrawl-simple/main/apps/api/v1-openapi.json -k your-api-key -r
+
+# Then restart Claude Desktop to see the new tool in your sidebar
 ```
 
 ## Usage
@@ -62,11 +84,11 @@ openapi-to-mcp ./petstore.yaml -H "Authorization: Bearer token123"
 
 ## Claude Desktop Integration
 
-The tool can automatically register APIs with Claude Desktop:
+This tool is specifically designed to work seamlessly with Claude Desktop:
 
 ```bash
-# Register FireCrawl API with Claude Desktop
-openapi-to-mcp https://raw.githubusercontent.com/devflowinc/firecrawl-simple/main/apps/api/v1-openapi.json -k your-api-key -r
+# Register any API with Claude Desktop in one step
+openapi-to-mcp https://api.example.com/openapi.json -k your-api-key -r
 ```
 
 This will:
@@ -76,6 +98,17 @@ This will:
 4. Auto-generate a server name based on the API title
 
 After registration, restart Claude Desktop to see the new API in your sidebar.
+
+## Supported API Platforms
+
+You can use this tool with any OpenAPI-compliant API, including:
+
+- GitHub API
+- Stripe API
+- Shopify API
+- Firebase API
+- Custom internal APIs
+- And many more!
 
 ## Authentication Support
 
