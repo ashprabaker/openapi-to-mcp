@@ -1,6 +1,12 @@
 # 🔌 OpenAPI to MCP 🤖
 
-<!-- ASCII ART WILL GO HERE -->
+```
+ ___                 ___  ___  _     _         __ __  ___  ___ 
+| . | ___  ___ ._ _ | . || . \| |  _| |_ ___  |  \  \|  _>| . \
+| | || . \/ ._>| ' ||   ||  _/| |   | | / . \ |     || <__|  _/
+`___'|  _/\___.|_|_||_|_||_|  |_|   |_| \___/ |_|_|_|`___/|_|  
+     |_|                                                       
+```
 
 A CLI tool that converts any OpenAPI specification into an MCP server for seamless integration with Claude Desktop. Instantly add API access to Claude through a simple one-line command.
 
