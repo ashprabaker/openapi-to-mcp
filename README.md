@@ -34,6 +34,12 @@ openapi-to-mcp https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/
 # With API key authentication
 openapi-to-mcp ./petstore.yaml -k "your-api-key-here"
 
+# Auto-register with Claude Desktop (will update Claude Desktop's config file)
+openapi-to-mcp ./petstore.yaml -r
+
+# Auto-register with a custom server name
+openapi-to-mcp ./petstore.yaml -r -s "my-custom-api"
+
 # Custom server name and version
 openapi-to-mcp ./petstore.yaml -n "Pet Store API" -v "1.0.0"
 
@@ -51,6 +57,25 @@ openapi-to-mcp ./petstore.yaml -H "Authorization: Bearer token123"
 - `-u, --base-url <url>`: Set a custom base URL for API requests (defaults to the first server URL in the OpenAPI spec)
 - `-k, --api-key <key>`: API key for authentication (if the API requires it)
 - `-H, --header <header>`: Add a custom HTTP header to include with requests (format: "Name: Value")
+- `-r, --register`: Automatically register the API with Claude Desktop
+- `-s, --server-name <name>`: Custom name for the registered server in Claude Desktop
+
+## Claude Desktop Integration
+
+The tool can automatically register APIs with Claude Desktop:
+
+```bash
+# Register FireCrawl API with Claude Desktop
+openapi-to-mcp https://raw.githubusercontent.com/devflowinc/firecrawl-simple/main/apps/api/v1-openapi.json -k your-api-key -r
+```
+
+This will:
+1. Find the Claude Desktop config file on your system
+2. Add or update the server configuration
+3. Preserve any existing configurations
+4. Auto-generate a server name based on the API title
+
+After registration, restart Claude Desktop to see the new API in your sidebar.
 
 ## Authentication Support
 
@@ -71,6 +96,16 @@ The tool automatically detects authentication requirements from the OpenAPI spec
 
 ## Use with Claude Desktop
 
+There are two ways to use this tool with Claude Desktop:
+
+### Method 1: Auto-registration (recommended)
+```bash
+# One-time registration
+openapi-to-mcp your-api-spec.yaml -k your-api-key -r
+```
+Then restart Claude Desktop, and the API will appear in your sidebar.
+
+### Method 2: Manual connection
 1. Run the tool with your OpenAPI spec: `openapi-to-mcp ./spec.yaml -k your-api-key`
 2. In Claude Desktop, add the MCP Server via the "Add Tool" button
 3. Use the "Connect to local server" option and follow the prompts
