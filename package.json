@@ -12,6 +12,7 @@
     "start": "node dist/cli/index.js",
     "dev": "ts-node --esm src/cli/index.ts",
     "interactive": "node dist/cli/index.js -i",
+    "server": "node dist/cli/index.js --no-ui",
     "test": "jest"
   },
   "keywords": [

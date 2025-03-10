@@ -16,25 +16,47 @@ import figlet from 'figlet';
 
 const execAsync = promisify(exec);
 
-// Display ASCII art banner
-console.log(
-  chalk.cyan(
-    figlet.textSync('OpenAPI to MCP', { 
-      font: 'Standard',
-      horizontalLayout: 'default',
-      verticalLayout: 'default' 
-    })
-  )
-);
-console.log(chalk.blue('Convert any OpenAPI spec to an MCP server for Claude Desktop 🤖\n'));
+// Initialize CLI arguments
+const args = process.argv.slice(2);
+const isUIMode = !args.includes('--no-ui') && process.stderr.isTTY;
+
+// Only display ASCII art banner if in UI mode
+if (isUIMode) {
+  console.error(
+    chalk.cyan(
+      figlet.textSync('OpenAPI to MCP', { 
+        font: 'Standard',
+        horizontalLayout: 'default',
+        verticalLayout: 'default' 
+      })
+    )
+  );
+  console.error(chalk.blue('Convert any OpenAPI spec to an MCP server for Claude Desktop 🤖\n'));
+}
+
+// Configure ora spinners to always use stderr
+const createSpinner = (text: string) => {
+  return ora({
+    text,
+    stream: process.stderr
+  });
+};
 
 const program = new Command();
+
+// Redirect Commander output to stderr
+program.configureOutput({
+  writeOut: (str) => process.stderr.write(str),
+  writeErr: (str) => process.stderr.write(str),
+  outputError: (str, write) => write(chalk.red(str))
+});
 
 // Define the CLI version
 program
   .name(chalk.cyan('openapi-to-mcp'))
   .description('CLI tool to convert OpenAPI specs to MCP servers')
-  .version('1.0.0');
+  .version('1.0.0')
+  .option('--no-ui', 'Disable UI elements like ASCII art and colors (useful for scripting)');
 
 // Define the main command
 program
@@ -58,6 +80,7 @@ program
     serverName?: string;
     restartClaude?: boolean;
     interactive?: boolean;
+    ui?: boolean;
   }) => {
     try {
       // If no spec path is provided or interactive mode is enabled, prompt for inputs
@@ -68,16 +91,19 @@ program
       }
 
       // Load the OpenAPI spec
-      const spinner = ora(chalk.blue(`Loading OpenAPI spec from ${chalk.cyan(specPath)}...`)).start();
+      const spinner = isUIMode ? createSpinner(chalk.blue(`Loading OpenAPI spec from ${chalk.cyan(specPath)}...`)) : null;
+      spinner?.start();
       const spec = await loadOpenAPISpec(specPath);
-      spinner.succeed(chalk.green(`Successfully loaded OpenAPI spec from ${chalk.cyan(specPath)}`));
+      spinner?.succeed(chalk.green(`Successfully loaded OpenAPI spec from ${chalk.cyan(specPath)}`));
       
       // Check if API requires authentication
       const requiresAuth = checkIfAuthRequired(spec);
       
       // If auth is required but no API key provided, prompt for it
       if (requiresAuth && !options.apiKey && !hasAuthHeader(options.header)) {
-        console.log(chalk.yellow('⚠️  API requires authentication'));
+        if (isUIMode) {
+          console.error(chalk.yellow('⚠️  API requires authentication'));
+        }
         options.apiKey = await promptForApiKey();
       }
       
@@ -87,17 +113,17 @@ program
         const authType = getAuthType(spec);
         
         if (authType === 'bearer') {
-          spinner.start(chalk.blue('Setting up Bearer authentication...'));
+          spinner?.start(chalk.blue('Setting up Bearer authentication...'));
           options.header['Authorization'] = `Bearer ${options.apiKey}`;
-          spinner.succeed(chalk.green('Bearer authentication configured'));
+          spinner?.succeed(chalk.green('Bearer authentication configured'));
         } else if (authType === 'apiKey') {
           const { name, in: location } = getApiKeyDetails(spec);
           if (location === 'header') {
-            spinner.start(chalk.blue(`Setting up API Key authentication in header '${name}'...`));
+            spinner?.start(chalk.blue(`Setting up API Key authentication in header '${name}'...`));
             options.header[name] = options.apiKey;
-            spinner.succeed(chalk.green('API Key authentication configured'));
-          } else {
-            spinner.info(chalk.blue(`API Key will be sent as a ${location} parameter`));
+            spinner?.succeed(chalk.green('API Key authentication configured'));
+          } else if (isUIMode) {
+            spinner?.info(chalk.blue(`API Key will be sent as a ${location} parameter`));
           }
         }
       }
@@ -109,7 +135,7 @@ program
           spec.info.title?.toLowerCase().replace(/[^a-z0-9]/g, '_') || 
           path.basename(specPath, path.extname(specPath));
         
-        spinner.start(chalk.blue(`Registering API as "${chalk.cyan(serverName)}" with Claude Desktop...`));
+        spinner?.start(chalk.blue(`Registering API as "${chalk.cyan(serverName)}" with Claude Desktop...`));
         await registerWithClaudeDesktop(
           serverName,
           specPath,
@@ -119,20 +145,20 @@ program
           options.baseUrl,
           options.header
         );
-        spinner.succeed(chalk.green(`Successfully registered API as "${chalk.cyan(serverName)}" with Claude Desktop!`));
+        spinner?.succeed(chalk.green(`Successfully registered API as "${chalk.cyan(serverName)}" with Claude Desktop!`));
 
         // If restart option is set, restart Claude Desktop
         if (options.restartClaude) {
-          spinner.start(chalk.blue('Restarting Claude Desktop...'));
+          spinner?.start(chalk.blue('Restarting Claude Desktop...'));
           await restartClaudeDesktop();
-          spinner.succeed(chalk.green('Claude Desktop has been restarted!'));
-        } else {
-          console.log(chalk.yellow('ℹ️  Remember to restart Claude Desktop for the changes to take effect.'));
+          spinner?.succeed(chalk.green('Claude Desktop has been restarted!'));
+        } else if (isUIMode) {
+          console.error(chalk.yellow('ℹ️  Remember to restart Claude Desktop for the changes to take effect.'));
         }
       }
       
       // Create the server generator
-      spinner.start(chalk.blue('Generating MCP server...'));
+      spinner?.start(chalk.blue('Generating MCP server...'));
       const generator = new MCPServerGenerator(spec, {
         name: options.name,
         version: options.version,
@@ -143,22 +169,32 @@ program
       
       // Generate the MCP server
       const server = generator.generateServer();
-      spinner.succeed(chalk.green('MCP server generated successfully'));
+      spinner?.succeed(chalk.green('MCP server generated successfully'));
       
       // Start the server using stdio transport
-      spinner.start(chalk.blue('Starting MCP server via stdio...'));
+      spinner?.start(chalk.blue('Starting MCP server via stdio...'));
       const transport = new StdioServerTransport();
-      await server.connect(transport);
       
-      spinner.succeed(chalk.green('MCP server is running'));
-      console.log(chalk.cyan('┌─────────────────────────────────────────────────────────┐'));
-      console.log(chalk.cyan('│                                                         │'));
-      console.log(chalk.cyan('│  ') + chalk.yellow('MCP server is running and ready to use with Claude') + chalk.cyan('  │'));
-      console.log(chalk.cyan('│  ') + chalk.yellow('Press Ctrl+C to stop the server') + chalk.cyan('                    │'));
-      console.log(chalk.cyan('│                                                         │'));
-      console.log(chalk.cyan('└─────────────────────────────────────────────────────────┘'));
+      // If in UI mode, display a nice box with server status
+      if (isUIMode) {
+        spinner?.succeed(chalk.green('MCP server is running'));
+        console.error(chalk.cyan('┌─────────────────────────────────────────────────────────┐'));
+        console.error(chalk.cyan('│                                                         │'));
+        console.error(chalk.cyan('│  ') + chalk.yellow('MCP server is running and ready to use with Claude') + chalk.cyan('  │'));
+        console.error(chalk.cyan('│  ') + chalk.yellow('Press Ctrl+C to stop the server') + chalk.cyan('                    │'));
+        console.error(chalk.cyan('│                                                         │'));
+        console.error(chalk.cyan('└─────────────────────────────────────────────────────────┘'));
+      }
+      
+      // This connects to the transport and processes MCP messages
+      // All other UI elements should use console.error, not console.log
+      await server.connect(transport);
     } catch (error: unknown) {
-      ora().fail(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
+      if (isUIMode) {
+        ora().fail(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
+      } else {
+        console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      }
       process.exit(1);
     }
   });
@@ -169,7 +205,7 @@ program
 async function promptForMissingOptions(specPath?: string, options?: any): Promise<{ specPath: string, options: any }> {
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stderr // Use stderr instead of stdout for prompts
   });
 
   const prompt = (question: string): Promise<string> => {
@@ -192,7 +228,7 @@ async function promptForMissingOptions(specPath?: string, options?: any): Promis
     
     // Prompt for OpenAPI spec path if not provided
     if (!specPath) {
-      console.log(chalk.blue('\n📋 Interactive Mode - Enter the required information:'));
+      console.error(chalk.blue('\n📋 Interactive Mode - Enter the required information:'));
       specPath = await prompt('Enter the URL or file path to your OpenAPI spec: ');
     }
     
@@ -245,13 +281,23 @@ async function restartClaudeDesktop(): Promise<void> {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for app to close
       await execAsync('claude-desktop &');
     } else {
-      console.log(chalk.yellow(`⚠️  Automatic restart not supported on platform: ${platform}`));
-      console.log(chalk.yellow('⚠️  Please restart Claude Desktop manually.'));
+      if (isUIMode) {
+        console.error(chalk.yellow(`⚠️  Automatic restart not supported on platform: ${platform}`));
+        console.error(chalk.yellow('⚠️  Please restart Claude Desktop manually.'));
+      } else {
+        console.error(`Automatic restart not supported on platform: ${platform}`);
+        console.error('Please restart Claude Desktop manually.');
+      }
       return;
     }
   } catch (error) {
-    console.log(chalk.yellow('⚠️  Failed to restart Claude Desktop:'), error instanceof Error ? error.message : String(error));
-    console.log(chalk.yellow('⚠️  Please restart Claude Desktop manually.'));
+    if (isUIMode) {
+      console.error(chalk.yellow('⚠️  Failed to restart Claude Desktop:'), error instanceof Error ? error.message : String(error));
+      console.error(chalk.yellow('⚠️  Please restart Claude Desktop manually.'));
+    } else {
+      console.error('Failed to restart Claude Desktop:', error instanceof Error ? error.message : String(error));
+      console.error('Please restart Claude Desktop manually.');
+    }
   }
 }
 
@@ -272,11 +318,19 @@ async function registerWithClaudeDesktop(
     const configPath = await findClaudeDesktopConfig();
     
     if (!configPath) {
-      console.log(chalk.yellow('⚠️  Could not find Claude Desktop config file. Continuing without registration.'));
+      if (isUIMode) {
+        console.error(chalk.yellow('⚠️  Could not find Claude Desktop config file. Continuing without registration.'));
+      } else {
+        console.error('Could not find Claude Desktop config file. Continuing without registration.');
+      }
       return;
     }
     
-    console.log(chalk.blue(`Found Claude Desktop config at: ${chalk.cyan(configPath)}`));
+    if (isUIMode) {
+      console.error(chalk.blue(`Found Claude Desktop config at: ${chalk.cyan(configPath)}`));
+    } else {
+      console.error(`Found Claude Desktop config at: ${configPath}`);
+    }
     
     // Read the current config
     let config: any = {};
@@ -293,8 +347,8 @@ async function registerWithClaudeDesktop(
       config.mcpServers = {};
     }
     
-    // Build the arguments array
-    const args = [specPath];
+    // Build the arguments array - must include "--no-ui" to disable UI elements
+    const args = [specPath, '--no-ui'];
     
     if (apiKey) {
       args.push('-k', apiKey);
@@ -328,8 +382,13 @@ async function registerWithClaudeDesktop(
     // Write the updated config
     await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
   } catch (err) {
-    console.log(chalk.yellow('⚠️  Failed to register with Claude Desktop:'), err instanceof Error ? err.message : String(err));
-    console.log(chalk.yellow('⚠️  Continuing without registration.'));
+    if (isUIMode) {
+      console.error(chalk.yellow('⚠️  Failed to register with Claude Desktop:'), err instanceof Error ? err.message : String(err));
+      console.error(chalk.yellow('⚠️  Continuing without registration.'));
+    } else {
+      console.error('Failed to register with Claude Desktop:', err instanceof Error ? err.message : String(err));
+      console.error('Continuing without registration.');
+    }
   }
 }
 
@@ -448,7 +507,7 @@ function hasAuthHeader(headers: Record<string, string>): boolean {
 function promptForApiKey(): Promise<string> {
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stderr
+    output: process.stderr // Use stderr instead of stdout for prompts
   });
   
   return new Promise(resolve => {

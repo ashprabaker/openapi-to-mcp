@@ -100,6 +100,9 @@ openapi-to-mcp ./your-api.yaml -u "https://api.example.com"
 
 # With custom headers
 openapi-to-mcp ./your-api.yaml -H "Authorization: Bearer token123"
+
+# Running in headless mode (no UI, for Claude Desktop to use)
+openapi-to-mcp ./your-api.yaml --no-ui
 ```
 
 ## ⚙️ Options
@@ -113,6 +116,7 @@ openapi-to-mcp ./your-api.yaml -H "Authorization: Bearer token123"
 - `-r, --register`: Automatically register the API with Claude Desktop
 - `-s, --server-name <name>`: Custom name for the registered server in Claude Desktop
 - `-R, --restart-claude`: Automatically restart Claude Desktop after registration (cross-platform)
+- `--no-ui`: Disable all UI elements (ASCII art, colors, etc.) for clean JSON output (used by Claude Desktop)
 
 ## 🤖 Claude Desktop Integration
 
@@ -132,6 +136,8 @@ This will:
 3. 💾 Preserve any existing configurations
 4. 🏷️ Auto-generate a server name based on the API title
 5. 🔄 Automatically restart Claude Desktop (if -R flag is used)
+
+When registering an API with Claude Desktop, the tool automatically adds the `--no-ui` flag to ensure clean JSON communication between Claude and the server. This prevents the ASCII art and colorful output from interfering with the MCP protocol.
 
 The auto-restart feature works on macOS, Windows, and Linux, allowing you to immediately use your new API without manually restarting Claude.
 
@@ -187,6 +193,21 @@ Claude Desktop will automatically restart and the API will appear in your sideba
 1. Run the tool with your OpenAPI spec: `openapi-to-mcp ./spec.yaml -k your-api-key`
 2. In Claude Desktop, add the MCP Server via the "Add Tool" button
 3. Use the "Connect to local server" option and follow the prompts
+
+## 🔧 Troubleshooting
+
+### JSON Parsing Errors in Claude Desktop
+If you see errors like `MCP firecrawl: Unexpected token '/'...` or other JSON-related errors:
+
+1. Make sure you're using the latest version of this tool
+2. Try running with the `--no-ui` flag: `openapi-to-mcp your-api.yaml --no-ui`
+3. When registering with Claude Desktop, the tool automatically adds this flag
+
+The `--no-ui` flag ensures clean JSON communication by:
+- Disabling the ASCII art banner
+- Removing colorful output
+- Redirecting all UI elements to stderr instead of stdout
+- Keeping the MCP communication channel clean
 
 ## 📝 License
 
