@@ -9,6 +9,7 @@ export interface ServerOptions {
   version?: string;
   baseUrl?: string;
   headers?: Record<string, string>;
+  apiKey?: string;
 }
 
 export class MCPServerGenerator {
@@ -24,12 +25,14 @@ export class MCPServerGenerator {
       version: options.version || this.openApiSpec.info.version || '1.0.0',
       baseUrl: options.baseUrl,
       headers: options.headers || {},
+      apiKey: options.apiKey,
     };
     
     this.converter = new OpenAPIToMCPConverter(this.openApiSpec);
     this.httpClient = new HttpClient({
       baseUrl: this.options.baseUrl,
       headers: this.options.headers,
+      apiKey: this.options.apiKey,
     }, this.openApiSpec);
   }
 

@@ -4,18 +4,26 @@ import { OpenAPIV3 } from 'openapi-types';
 interface HttpClientOptions {
   baseUrl?: string;
   headers?: Record<string, string>;
+  apiKey?: string;
 }
 
 export class HttpClient {
   private client: AxiosInstance;
   private openApiSpec: OpenAPIV3.Document;
   private baseUrl: string;
+  private apiKey?: string;
+  private apiKeyParamName?: string;
+  private apiKeyLocation?: string;
 
   constructor(options: HttpClientOptions, openApiSpec: OpenAPIV3.Document) {
     this.openApiSpec = openApiSpec;
+    this.apiKey = options.apiKey;
     
     // Extract base URL from the OpenAPI spec if not provided in options
     this.baseUrl = options.baseUrl || this.getBaseUrlFromSpec();
+    
+    // Extract API key parameter info if available
+    this.extractApiKeyInfo();
     
     this.client = axios.create({
       baseURL: this.baseUrl,
@@ -24,6 +32,24 @@ export class HttpClient {
         ...options.headers
       }
     });
+  }
+
+  /**
+   * Extract API key information from the security schemes
+   */
+  private extractApiKeyInfo(): void {
+    const securitySchemes = this.openApiSpec.components?.securitySchemes;
+    if (!securitySchemes) return;
+    
+    for (const [_, scheme] of Object.entries(securitySchemes)) {
+      const securityScheme = scheme as OpenAPIV3.SecuritySchemeObject;
+      
+      if (securityScheme.type === 'apiKey' && securityScheme.in === 'query') {
+        this.apiKeyParamName = securityScheme.name;
+        this.apiKeyLocation = securityScheme.in;
+        break;
+      }
+    }
   }
 
   /**
@@ -62,6 +88,11 @@ export class HttpClient {
         queryParams[param.name] = params[param.name];
       }
     });
+    
+    // Add API key as query parameter if necessary
+    if (this.apiKey && this.apiKeyParamName && this.apiKeyLocation === 'query') {
+      queryParams[this.apiKeyParamName] = this.apiKey;
+    }
     
     return queryParams;
   }
