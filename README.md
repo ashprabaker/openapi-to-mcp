@@ -2,8 +2,6 @@
 
 A CLI tool that converts any OpenAPI specification into an MCP server for seamless integration with Claude Desktop. Instantly add API access to Claude through a simple one-line command.
 
-![Claude Desktop Integration](https://github.com/ashprabaker/openapi-to-mcp/raw/main/docs/images/claude-desktop-integration.png)
-
 ## Key Features
 
 - **Instant Claude Desktop Integration**: Add any API to Claude with a single command
