@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { OpenAPIV3 } from 'openapi-types';
+import FormData from 'form-data';
 
 interface HttpClientOptions {
   baseUrl?: string;
@@ -25,12 +26,21 @@ export class HttpClient {
     // Extract API key parameter info if available
     this.extractApiKeyInfo();
     
+    // Create headers with content type and any provided headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    };
+    
+    // Add API key to headers if it's supposed to be in the header
+    if (this.apiKey && this.apiKeyParamName && this.apiKeyLocation === 'header' 
+        && !headers[this.apiKeyParamName]) {
+      headers[this.apiKeyParamName] = this.apiKey;
+    }
+    
     this.client = axios.create({
       baseURL: this.baseUrl,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
+      headers
     });
   }
 
@@ -44,10 +54,14 @@ export class HttpClient {
     for (const [_, scheme] of Object.entries(securitySchemes)) {
       const securityScheme = scheme as OpenAPIV3.SecuritySchemeObject;
       
-      if (securityScheme.type === 'apiKey' && securityScheme.in === 'query') {
+      if (securityScheme.type === 'apiKey') {
         this.apiKeyParamName = securityScheme.name;
         this.apiKeyLocation = securityScheme.in;
         break;
+      } else if (securityScheme.type === 'http' && securityScheme.scheme === 'bearer') {
+        this.apiKeyParamName = 'Authorization';
+        this.apiKeyLocation = 'header';
+        // Don't break here as there might be an apiKey scheme which takes precedence
       }
     }
   }
@@ -110,17 +124,68 @@ export class HttpClient {
     if (!jsonContent.schema) return null;
     
     const schema = jsonContent.schema as OpenAPIV3.SchemaObject;
-    if (schema.type !== 'object' || !schema.properties) return null;
     
-    const body: Record<string, any> = {};
-    
-    Object.keys(schema.properties).forEach(propName => {
-      if (params[propName] !== undefined) {
-        body[propName] = params[propName];
+    // Handle array request body
+    if (schema.type === 'array') {
+      if (params.body && Array.isArray(params.body)) {
+        return params.body;
       }
-    });
+      return [];
+    }
     
-    return body;
+    // Handle object request body
+    if (schema.type === 'object' || ('$ref' in schema && schema.$ref)) {
+      const body: Record<string, any> = {};
+      
+      // If it's a referenced schema or doesn't have properties, just pass all params
+      if (('$ref' in schema && schema.$ref) || !schema.properties) {
+        // Filter out undefined and empty string values
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') {
+            // Handle arrays that might come as strings
+            if (typeof value === 'string' && value.startsWith('[') && value.endsWith(']')) {
+              try {
+                body[key] = JSON.parse(value);
+              } catch (e) {
+                body[key] = value; // Keep as string if parsing fails
+              }
+            } else {
+              body[key] = value;
+            }
+          }
+        });
+        return body;
+      }
+      
+      // Process according to schema properties
+      Object.entries(schema.properties || {}).forEach(([propName, propSchema]) => {
+        if (params[propName] !== undefined) {
+          const schemaObj = propSchema as OpenAPIV3.SchemaObject;
+          
+          // Handle array properties that might come in as strings
+          if (schemaObj.type === 'array' && typeof params[propName] === 'string') {
+            try {
+              // Try to parse if it looks like JSON array
+              if (params[propName].startsWith('[') && params[propName].endsWith(']')) {
+                body[propName] = JSON.parse(params[propName]);
+              } else {
+                // Handle comma-separated values
+                body[propName] = params[propName].split(',').map(item => item.trim());
+              }
+            } catch (e) {
+              // If parsing fails, use as a single-item array
+              body[propName] = [params[propName]];
+            }
+          } else {
+            body[propName] = params[propName];
+          }
+        }
+      });
+      
+      return body;
+    }
+    
+    return null;
   }
 
   /**
@@ -138,14 +203,60 @@ export class HttpClient {
     // Extract query parameters
     const queryParams = this.extractQueryParams(params, op);
     
-    // Extract request body
-    const requestBody = this.extractRequestBody(params, op);
+    // Check if params are nested inside a body object (common with some APIs)
+    const actualParams = params.body && typeof params.body === 'object' ? params.body : params;
     
+    // Extract request body
+    let requestBody = this.extractRequestBody(actualParams, op);
+    
+    // For debugging
+    console.error('Request URL:', this.baseUrl + url);
+    console.error('Request Method:', method);
+    console.error('Request Body:', JSON.stringify(requestBody, null, 2));
+    
+    // Handle special cases for specific content types
+    let contentType = 'application/json';
+    let data = requestBody;
+    
+    // Check if this is a multi-part form data request
+    if (op.requestBody) {
+      const requestBodyObj = op.requestBody as OpenAPIV3.RequestBodyObject;
+      if (requestBodyObj.content && requestBodyObj.content['multipart/form-data']) {
+        contentType = 'multipart/form-data';
+        
+        // Create FormData object for multipart requests
+        const formData = new FormData();
+        if (requestBody) {
+          Object.entries(requestBody).forEach(([key, value]) => {
+            if (value !== undefined) {
+              formData.append(key, value as any);
+            }
+          });
+        }
+        data = formData;
+      }
+    }
+    
+    // Handle array request bodies correctly
+    if (op.requestBody) {
+      const requestBodyObj = op.requestBody as OpenAPIV3.RequestBodyObject;
+      if (requestBodyObj.content?.['application/json']?.schema) {
+        const schema = requestBodyObj.content['application/json'].schema as OpenAPIV3.SchemaObject;
+        if (schema.type === 'array' && Array.isArray(actualParams.body)) {
+          data = actualParams.body;
+        }
+      }
+    }
+    
+    // Set up request configuration
     const config: AxiosRequestConfig = {
       method: method,
       url,
       params: queryParams,
-      data: requestBody,
+      data,
+      headers: {
+        'Content-Type': contentType
+      }
     };
     
     try {
@@ -153,7 +264,18 @@ export class HttpClient {
       return response.data;
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        throw new Error(`API request failed: ${error.message}`);
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.error('Error Response:', error.response.data);
+          throw new Error(`API request failed with status ${error.response.status}: ${JSON.stringify(error.response.data)}`);
+        } else if (error.request) {
+          // The request was made but no response was received
+          throw new Error(`API request failed: No response received from server`);
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          throw new Error(`API request failed: ${error.message}`);
+        }
       }
       throw error;
     }

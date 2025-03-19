@@ -126,10 +126,16 @@ export class OpenAPIToMCPConverter {
     
     // Create a schema object for the parameters
     const paramSchemas: Record<string, any> = {};
+    const paramDescriptions: Record<string, string> = {};
     
     parameters.forEach(param => {
       const { name, schema } = this.convertParameterToZodSchema(param);
       paramSchemas[name] = schema;
+      
+      // Store parameter description if available
+      if (param.description) {
+        paramDescriptions[name] = param.description;
+      }
     });
     
     // Handle request body if present
@@ -158,6 +164,26 @@ export class OpenAPIToMCPConverter {
               case 'boolean':
                 zodSchema = z.boolean();
                 break;
+              case 'array':
+                const itemSchema = (propSchema as OpenAPIV3.ArraySchemaObject).items as OpenAPIV3.SchemaObject;
+                if (itemSchema.type === 'string') {
+                  zodSchema = z.array(z.string());
+                } else if (itemSchema.type === 'number') {
+                  zodSchema = z.array(z.number());
+                } else if (itemSchema.type === 'integer') {
+                  zodSchema = z.array(z.number().int());
+                } else if (itemSchema.type === 'boolean') {
+                  zodSchema = z.array(z.boolean());
+                } else if ('$ref' in itemSchema && itemSchema.$ref) {
+                  // Handle references for array items
+                  zodSchema = z.array(z.any());
+                } else {
+                  zodSchema = z.array(z.any());
+                }
+                break;
+              case 'object':
+                zodSchema = z.object({}).passthrough();
+                break;
               default:
                 zodSchema = z.any();
             }
@@ -167,14 +193,53 @@ export class OpenAPIToMCPConverter {
             }
             
             paramSchemas[propName] = zodSchema;
+            
+            // Store property description if available
+            if ((propSchema as OpenAPIV3.SchemaObject).description) {
+              paramDescriptions[propName] = (propSchema as OpenAPIV3.SchemaObject).description as string;
+            }
           });
+        } else if ('$ref' in bodySchema && bodySchema.$ref) {
+          // Handle reference schemas
+          // For now, we'll just use a passthrough object
+          paramSchemas['body'] = z.object({}).passthrough();
+          paramDescriptions['body'] = 'Request body';
+        } else if (bodySchema.type === 'array') {
+          // Handle array request body
+          paramSchemas['body'] = z.array(z.any());
+          paramDescriptions['body'] = 'Array of items';
         }
+      }
+    }
+    
+    // Generate a more detailed description that includes parameter descriptions
+    let detailedDescription = op.summary || op.description || `${method.toUpperCase()} ${path}`;
+    
+    // Add the detailed description from the operation if available
+    if (op.description && op.summary && op.description !== op.summary) {
+      detailedDescription += `\n\n${op.description}`;
+    }
+    
+    // Add parameter descriptions if available
+    if (Object.keys(paramDescriptions).length > 0) {
+      detailedDescription += '\n\nParameters:';
+      for (const [paramName, paramDescription] of Object.entries(paramDescriptions)) {
+        detailedDescription += `\n- ${paramName}: ${paramDescription}`;
+      }
+    }
+    
+    // Include details about required parameters
+    const requiredParams = op.parameters?.filter(p => (p as OpenAPIV3.ParameterObject).required) || [];
+    if (requestBody && (requestBody as OpenAPIV3.RequestBodyObject).required) {
+      const bodySchema = ((requestBody as OpenAPIV3.RequestBodyObject).content?.['application/json']?.schema as OpenAPIV3.SchemaObject);
+      if (bodySchema?.required?.length) {
+        detailedDescription += '\n\nRequired fields: ' + bodySchema.required.join(', ');
       }
     }
     
     return {
       name: operationId,
-      description: op.summary || op.description || `${method.toUpperCase()} ${path}`,
+      description: detailedDescription,
       parameters: paramSchemas,
       path,
       method,

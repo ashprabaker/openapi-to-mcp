@@ -10,6 +10,14 @@
 
 A CLI tool that converts any OpenAPI specification into an MCP server for seamless integration with Claude Desktop. Instantly add API access to Claude through a simple one-line command.
 
+## 🎬 See it in action
+
+[![OpenAPI to MCP Demo](https://cdn.loom.com/sessions/thumbnails/38d09a628f2d46baa05a2a6402971e30-with-play.gif)](https://www.loom.com/share/38d09a628f2d46baa05a2a6402971e30?sid=51ff963c-7128-4011-8fe8-903a7dd9547b)
+
+👆 **Click the image above to watch the demo video!**
+
+> 🏆 **Mini-Hackathon Project**: This tool was created during a mini-hackathon to enable Claude to interact with any API through OpenAPI specifications and the Model Context Protocol.
+
 ## ✨ Key Features
 
 - 🔄 **Instant Claude Desktop Integration**: Add any API to Claude with a single command
